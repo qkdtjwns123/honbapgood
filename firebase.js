@@ -980,7 +980,27 @@ const api = {
     isAdminEmail,
     addMatchSuccess,
     resetMatchScore,
+    reportUser,
 };
+
+// ────────────────────── 신고 ──────────────────────
+async function reportUser({ targetUid, targetEmail, reason, context = "chat", roomId = null }) {
+    await my.requireAuth();
+    if (!targetUid && !targetEmail) throw new Error("신고 대상 정보가 없습니다.");
+    if (!reason) throw new Error("신고 사유를 입력해주세요.");
+
+    await addDoc(collection(db, "reports"), {
+        reporterUid: my.uid,
+        reporterEmail: auth.currentUser?.email ?? null,
+        targetUid: targetUid ?? null,
+        targetEmail: targetEmail ?? null,
+        reason: String(reason).trim(),
+        context,           // "chat" | "community"
+        roomId: roomId ?? null,
+        status: "pending", // pending | reviewed | dismissed
+        createdAt: serverTimestamp()
+    });
+}
 
 window.fb = api;
 window.fbReady = Promise.resolve(api);
