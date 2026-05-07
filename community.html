@@ -42,7 +42,6 @@
             font-size: 12px
         }
 
-        /* ✅ 글쓰기 익명 체크: 왼쪽 붙이고 가로 유지 */
         .anon-wrap {
             display: inline-flex;
             align-items: center;
@@ -56,7 +55,6 @@
                 margin: 0
             }
 
-        /* ✅ 댓글 UI */
         .comment-wrap {
             margin-top: 10px;
             padding-top: 10px;
@@ -157,7 +155,6 @@
         const list = $("#list"), moreBtn = $("#moreBtn"), countTxt = $("#countTxt"), postBtn = $("#postBtn"),
             postMsg = $("#postMsg"), titleEl = $("#title"), bodyEl = $("#body"), anonEl = $("#anon");
 
-        // ✅ 로그아웃 버튼 기능 연결
         const logoutFab = document.getElementById("logoutFab");
         logoutFab?.addEventListener("click", async () => {
             try { if (window.fbReady) await window.fbReady; await window.fb.logout(); } catch { } finally { location.href = "login.html"; }
@@ -171,14 +168,12 @@
             "'": "&#39;"
         }[m]));
 
-        // 🔗 URL을 자동으로 링크로
         const linkify = (html) =>
             (html || "").replace(
                 /(https?:\/\/[^\s<]+)/g,
                 '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
             );
 
-        // ✅ 좋아요 버튼 색깔 토글용 공통 함수
         function applyLikeVisual(btn, liked) {
             if (!btn) return;
             btn.style.borderColor = "#ef4444";
@@ -219,15 +214,14 @@
             const when = c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : "";
 
             div.innerHTML = `
-                        <div class="comment-meta">${esc(who)} · ${when}</div>
-                        <div class="comment-text">${linkify(esc(c.text || ""))}</div>
-                        <div class="muted-sm" style="margin-top:4px; display:flex; align-items:center; gap:6px;">
-                            <button class="link-btn c-like-btn" style="padding:2px 8px; font-size:11px; border-color:#ef4444; color:#ef4444;">좋아요</button>
-                            <span><b class="c-likecnt">0</b></span>
-                        </div>
-                    `;
+                <div class="comment-meta">${esc(who)} · ${when}</div>
+                <div class="comment-text">${linkify(esc(c.text || ""))}</div>
+                <div class="muted-sm" style="margin-top:4px; display:flex; align-items:center; gap:6px;">
+                    <button class="link-btn c-like-btn" style="padding:2px 8px; font-size:11px; border-color:#ef4444; color:#ef4444;">좋아요</button>
+                    <span><b class="c-likecnt">0</b></span>
+                </div>
+            `;
 
-            // 좋아요 로직 (개수 + 색상)
             const likeBtn = div.querySelector(".c-like-btn");
             const likeCntEl = div.querySelector(".c-likecnt");
 
@@ -235,7 +229,6 @@
                 let liked = false;
                 applyLikeVisual(likeBtn, liked);
 
-                // 현재 내가 좋아요 눌렀는지 초기 상태 조회
                 (async () => {
                     try {
                         const ref = doc(db, "posts", postId, "comments", c.id, "likes", MY_UID);
@@ -285,18 +278,18 @@
             const block = document.createElement("div");
             block.className = "comment-wrap";
             block.innerHTML = `
-                        <div class="muted-sm" style="margin-bottom:6px">댓글</div>
-                        <div class="comment-list"></div>
-                        <div class="comment-form">
-                            <input class="c-text" type="text" placeholder="댓글을 입력하세요" />
-                            <label class="c-anon-label">
-                                <input type="checkbox" class="c-anon" />
-                                <span class="muted-sm">익명</span>
-                            </label>
-                            <button class="btn" style="width:auto;min-width:88px">등록</button>
-                        </div>
-                        <p class="c-msg status"></p>
-                    `;
+                <div class="muted-sm" style="margin-bottom:6px">댓글</div>
+                <div class="comment-list"></div>
+                <div class="comment-form">
+                    <input class="c-text" type="text" placeholder="댓글을 입력하세요" />
+                    <label class="c-anon-label">
+                        <input type="checkbox" class="c-anon" />
+                        <span class="muted-sm">익명</span>
+                    </label>
+                    <button class="btn" style="width:auto;min-width:88px">등록</button>
+                </div>
+                <p class="c-msg status"></p>
+            `;
             wrap.appendChild(block);
 
             const listEl = block.querySelector(".comment-list");
@@ -362,17 +355,16 @@
             const when = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : "";
 
             wrap.innerHTML = `
-                        <h3 class="post-title">${esc(p.title)}</h3>
-                        <div class="post-meta">${esc(display)} · ${when}</div>
-                        <div class="post-body">${linkify(esc(p.body))}</div>
-                        <div class="row post-like-row" style="gap:8px; margin-top:8px; align-items:center;">
-                            <button class="link-btn post-like-btn" style="border-color:#ef4444; color:#ef4444;">좋아요</button>
-                            <span class="muted-sm"><b class="post-like-cnt">0</b></span>
-                        </div>
-                        <div class="row post-actions" style="gap:8px; margin-top:6px"></div>
-                    `;
+                <h3 class="post-title">${esc(p.title)}</h3>
+                <div class="post-meta">${esc(display)} · ${when}</div>
+                <div class="post-body">${linkify(esc(p.body))}</div>
+                <div class="row post-like-row" style="gap:8px; margin-top:8px; align-items:center;">
+                    <button class="link-btn post-like-btn" style="border-color:#ef4444; color:#ef4444;">좋아요</button>
+                    <span class="muted-sm"><b class="post-like-cnt">0</b></span>
+                </div>
+                <div class="row post-actions" style="gap:8px; margin-top:6px"></div>
+            `;
 
-            // 게시글 좋아요 (개수 + 색상)
             const likeBtn = wrap.querySelector(".post-like-btn");
             const likeCntEl = wrap.querySelector(".post-like-cnt");
 
@@ -380,7 +372,6 @@
                 let liked = false;
                 applyLikeVisual(likeBtn, liked);
 
-                // 현재 내가 좋아요 눌렀는지 초기 상태 조회
                 (async () => {
                     try {
                         const ref = doc(db, "posts", p.id, "likes", MY_UID);
@@ -452,10 +443,35 @@
                 actionsRow.appendChild(delBtn);
             }
 
+            // ✅ 신고 버튼 (내 글이 아닐 때만 표시)
+            if (!canEditOrDelete(p)) {
+                const rptBtn = document.createElement("button");
+                rptBtn.textContent = "신고";
+                rptBtn.className = "link-btn";
+                rptBtn.style.borderColor = "#f59e0b";
+                rptBtn.style.color = "#f59e0b";
+                rptBtn.addEventListener("click", async () => {
+                    const reason = prompt("신고 사유를 입력하세요.\n(예: 욕설, 스팸, 혐오 발언 등)");
+                    if (reason === null) return;
+                    if (!reason.trim()) { alert("신고 사유를 입력해주세요."); return; }
+                    try {
+                        await window.fb.reportUser({
+                            targetUid: p.authorUid,
+                            targetEmail: p.authorEmail,
+                            reason: reason.trim(),
+                            context: "community"
+                        });
+                        alert("신고가 접수되었습니다. 검토 후 조치하겠습니다.");
+                    } catch (e) {
+                        alert("신고 실패: " + (e.message || e));
+                    }
+                });
+                actionsRow.appendChild(rptBtn);
+            }
+
             // 댓글 블록
             renderCommentsBlock(p, wrap);
 
-            // ✅ [수정됨] prepend 대신 appendChild 사용 (최신글이 이미 0번 인덱스이므로, 순서대로 뒤에 붙여야 함)
             list.appendChild(wrap);
         }
 
