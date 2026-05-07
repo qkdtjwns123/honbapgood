@@ -4,7 +4,7 @@ import {
     getAuth, onAuthStateChanged, signInAnonymously, signOut,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink,
-    updatePassword, fetchSignInMethodsForEmail    // ✅ 추가
+    updatePassword, fetchSignInMethodsForEmail
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
@@ -47,7 +47,6 @@ const my = {
     async requireAuth() {
         if (auth.currentUser) return auth.currentUser;
 
-        // 1. 잠깐 기다려서 이미 로그인된 유저가 있는지 확인
         const waited = await new Promise(res => {
             let done = false;
             const t = setTimeout(() => {
@@ -66,7 +65,6 @@ const my = {
 
         if (waited) return waited;
 
-        // 2. 없으면 익명 로그인
         await signInAnonymously(auth);
         return new Promise(res => {
             const un = onAuthStateChanged(auth, u => {
@@ -100,19 +98,12 @@ const my = {
             content: (p.content ?? p.consume ?? "").trim() || null,
             freeText: (p.freeText ?? "").trim(),
             isBot: !!p.isBot,
-
-            // 패널티/이용 제한
             penaltyScore: p.penaltyScore ?? 0,
             penaltyUntil: p.penaltyUntil ?? null,
-
-            // 매칭 온도 (있던 값 유지)
             honbapTemp: p.honbapTemp ?? 50,
-
-            // matchCount / matchStars 는 addMatchSuccess 에서만 조정
             updatedAt: serverTimestamp(),
         };
 
-        // ✅ 닉네임 최종 중복 체크 (프론트에서 한 번 더 확인하지만, 여기서도 방어)
         if (payload.nickname) {
             const ok = await checkNicknameAvailable(payload.nickname);
             if (!ok) {
@@ -141,13 +132,9 @@ const _assertKwEmail = (e) => {
     }
 };
 
-// ✅ 깃허브 / 로컬 모두에서 signup.html로 정확히 보내기
 const _actionCodeSettings = () => {
     if (typeof window === "undefined") {
-        return {
-            url: "http://localhost/signup.html",
-            handleCodeInApp: true
-        };
+        return { url: "http://localhost/signup.html", handleCodeInApp: true };
     }
     const url = new URL("signup.html", window.location.href).href;
     return { url, handleCodeInApp: true };
@@ -157,7 +144,6 @@ async function sendEmailLink(email) {
     const e = (email || "").trim();
     _assertKwEmail(e);
 
-    // ✅ 1. Auth 중복 체크 (이메일 열거 보호 켜져 있으면 빈 배열 반환됨)
     let methods = [];
     try {
         methods = await fetchSignInMethodsForEmail(auth, e);
@@ -168,8 +154,6 @@ async function sendEmailLink(email) {
         throw new Error("이미 가입된 메일입니다.");
     }
 
-    // ✅ 2. Firestore 프로필 중복 체크 (이메일 열거 보호 우회)
-    // DB 조회를 위해 익명 인증 상태라도 확보
     await my.requireAuth();
     const q = query(collection(db, "profiles"), where("email", "==", e), limit(1));
     const ss = await getDocs(q);
@@ -207,7 +191,7 @@ async function setPasswordForCurrentUser(pw) {
 async function checkNicknameAvailable(nickname) {
     await my.requireAuth();
     const nick = (nickname || "").trim();
-    if (!nick) return true; // 빈 닉네임은 그냥 허용
+    if (!nick) return true;
 
     const qy = query(
         collection(db, "profiles"),
@@ -218,7 +202,6 @@ async function checkNicknameAvailable(nickname) {
     if (ss.empty) return true;
 
     const me = my.uid;
-    // 나 말고 다른 사람이 이 닉네임을 쓰고 있으면 false
     const someoneElse = ss.docs.some(d => d.id !== me);
     return !someoneElse;
 }
@@ -297,13 +280,11 @@ async function deletePost(postId) {
     await deleteDoc(ref);
 }
 
-// 게시글 좋아요 카운트
 function onLikeCount(postId, cb) {
     const qy = collection(db, "posts", postId, "likes");
     return onSnapshot(qy, ss => cb(ss.size));
 }
 
-// 게시글 좋아요 토글
 async function togglePostLike(postId) {
     if (!postId) throw new Error("postId가 필요합니다.");
     await my.requireAuth();
@@ -313,14 +294,10 @@ async function togglePostLike(postId) {
     if (s.exists()) {
         await deleteDoc(ref);
     } else {
-        await setDoc(ref, {
-            uid,
-            createdAt: serverTimestamp()
-        });
+        await setDoc(ref, { uid, createdAt: serverTimestamp() });
     }
 }
 
-// 댓글 목록
 async function listComments(postId, { take = 50 } = {}) {
     if (!postId) throw new Error("postId가 필요합니다.");
     await my.requireAuth();
@@ -337,7 +314,6 @@ async function listComments(postId, { take = 50 } = {}) {
     }
 }
 
-// 댓글 등록
 async function addComment(postId, { text, anonymous = false }) {
     if (!postId) throw new Error("postId가 필요합니다.");
     await my.requireAuth();
@@ -363,7 +339,6 @@ async function addComment(postId, { text, anonymous = false }) {
     });
 }
 
-// 댓글 삭제
 async function deleteComment(postId, commentId) {
     if (!postId || !commentId) throw new Error("postId/commentId가 필요합니다.");
     await my.requireAuth();
@@ -385,14 +360,12 @@ async function deleteComment(postId, commentId) {
     await deleteDoc(ref);
 }
 
-// 댓글 좋아요 카운트
 function onCommentLikeCount(postId, commentId, cb) {
     if (!postId || !commentId) return () => { };
     const qy = collection(db, "posts", postId, "comments", commentId, "likes");
     return onSnapshot(qy, ss => cb(ss.size));
 }
 
-// 댓글 좋아요 토글
 async function toggleCommentLike(postId, commentId) {
     if (!postId || !commentId) throw new Error("postId/commentId가 필요합니다.");
     await my.requireAuth();
@@ -402,11 +375,27 @@ async function toggleCommentLike(postId, commentId) {
     if (s.exists()) {
         await deleteDoc(ref);
     } else {
-        await setDoc(ref, {
-            uid,
-            createdAt: serverTimestamp()
-        });
+        await setDoc(ref, { uid, createdAt: serverTimestamp() });
     }
+}
+
+// ────────────────────── 신고 ──────────────────────
+async function reportUser({ targetUid, targetEmail, reason, context = "chat", roomId = null }) {
+    await my.requireAuth();
+    if (!targetUid && !targetEmail) throw new Error("신고 대상 정보가 없습니다.");
+    if (!reason) throw new Error("신고 사유를 입력해주세요.");
+
+    await addDoc(collection(db, "reports"), {
+        reporterUid: my.uid,
+        reporterEmail: auth.currentUser?.email ?? null,
+        targetUid: targetUid ?? null,
+        targetEmail: targetEmail ?? null,
+        reason: String(reason).trim(),
+        context,
+        roomId: roomId ?? null,
+        status: "pending",
+        createdAt: serverTimestamp()
+    });
 }
 
 // ────────────────────── 패널티 / 이용 제한 ──────────────────────
@@ -483,7 +472,6 @@ async function addMatchSuccess() {
     return result;
 }
 
-// 관리자용 매칭 스코어 초기화
 async function resetMatchScore() {
     await my.requireAuth();
     const ref = doc(db, "profiles", my.uid);
@@ -585,13 +573,10 @@ async function createRoomAndInvite(myDocId, oppDocId, oppUid) {
     await setDoc(roomRef, {
         members: Array.from(new Set([my.uid, oppUid])).filter(Boolean),
         createdAt: serverTimestamp(),
-
-        // 수락 단계: 아직 아무도 투표 안 한 상태
         phase: "pendingAccept",
         acceptVoted: [],
         acceptYes: [],
         declinedBy: null,
-
         invites: {
             to: oppDocId,
             at: serverTimestamp(),
@@ -613,7 +598,7 @@ async function createRoomAndInvite(myDocId, oppDocId, oppUid) {
     return roomRef;
 }
 
-// ────────────────────── 수락 단계(양쪽 모두 YES 필요) ──────────────────────
+// ────────────────────── 수락 단계 ──────────────────────
 async function myAcceptOrDecline(roomId, accept) {
     await my.requireAuth();
     const ref = doc(db, "rooms", roomId);
@@ -623,19 +608,16 @@ async function myAcceptOrDecline(roomId, accept) {
         if (!s.exists()) throw new Error("room not found");
         const r = s.data();
 
-        // 이미 결론 난 방이면 무시
         if (r.phase !== "pendingAccept") return;
 
         const voted = new Set(r.acceptVoted || []);
         const yesSet = new Set(r.acceptYes || []);
         const me = my.uid;
 
-        // 내 투표 기록
         voted.add(me);
         if (accept) {
             yesSet.add(me);
         } else {
-            // 내가 거절 -> 즉시 전체 실패
             tx.update(ref, {
                 phase: "declined",
                 declinedBy: me,
@@ -658,10 +640,8 @@ async function myAcceptOrDecline(roomId, accept) {
 
         if (everyoneVoted) {
             if (everyoneYes) {
-                // 양쪽 모두 예 → 수락 완료
                 patch.phase = "accepted";
             } else {
-                // 누군가는 거절 → 실패
                 patch.phase = "declined";
                 if (!r.declinedBy) patch.declinedBy = me;
             }
@@ -671,7 +651,6 @@ async function myAcceptOrDecline(roomId, accept) {
     });
 }
 
-// 양쪽의 최종 결정 기다리기
 async function waitInviteDecision(roomId, timeoutSec = 30) {
     const ref = doc(db, "rooms", roomId);
 
@@ -699,7 +678,7 @@ async function waitInviteDecision(roomId, timeoutSec = 30) {
     });
 }
 
-// ────────────────────── (기존) 채팅 시작 Y/n 단계 ──────────────────────
+// ────────────────────── 채팅 시작 Y/n 단계 ──────────────────────
 async function myStartYesOrNo(roomId, yes) {
     await my.requireAuth();
     const ref = doc(db, "rooms", roomId);
@@ -884,7 +863,7 @@ const api = {
     setPasswordForCurrentUser,
     loadProfile: my.nowProfile,
     saveProfile: my.saveProfile,
-    checkNicknameAvailable,        // ✅ 닉네임 중복 체크 API
+    checkNicknameAvailable,
 
     // 커뮤니티
     createPost,
@@ -899,17 +878,19 @@ const api = {
     onCommentLikeCount,
     toggleCommentLike,
 
+    // 신고
+    reportUser,
+
     // 매칭 시작
     startMatching: async (options) => {
         await my.requireAuth();
-        await _checkBanOrThrow();  // 이용 제한 중이면 여기서 막힘
+        await _checkBanOrThrow();
 
         await leaveQueueByUid(my.uid);
         const myDocId = await enterQueue(options);
 
         const found = await findOpponent(myDocId);
         if (!found) {
-            // 상대를 바로 못 찾으면, 내 큐 문서가 matched 상태가 될 때까지 기다림
             const myRef = doc(db, "matchQueue", myDocId);
             const room = await new Promise((resolve, reject) => {
                 const t = setTimeout(() => {
@@ -937,12 +918,12 @@ const api = {
     },
 
     // 수락/거절
-    readyToAccept: waitInviteDecision,      // {accepted, declinedBy}
+    readyToAccept: waitInviteDecision,
     acceptMatch: (roomId) => myAcceptOrDecline(roomId, true),
     declineMatch: (roomId) => myAcceptOrDecline(roomId, false),
 
-    // (2단계용, 현재 UI에서는 안 쓰지만 유지)
-    readyToChat: waitStartDecision,        // {go, declinedBy}
+    // 2단계용
+    readyToChat: waitStartDecision,
     startYes: (roomId) => myStartYesOrNo(roomId, true),
     startNo: (roomId) => myStartYesOrNo(roomId, false),
 
@@ -980,27 +961,7 @@ const api = {
     isAdminEmail,
     addMatchSuccess,
     resetMatchScore,
-    reportUser,
 };
-
-// ────────────────────── 신고 ──────────────────────
-async function reportUser({ targetUid, targetEmail, reason, context = "chat", roomId = null }) {
-    await my.requireAuth();
-    if (!targetUid && !targetEmail) throw new Error("신고 대상 정보가 없습니다.");
-    if (!reason) throw new Error("신고 사유를 입력해주세요.");
-
-    await addDoc(collection(db, "reports"), {
-        reporterUid: my.uid,
-        reporterEmail: auth.currentUser?.email ?? null,
-        targetUid: targetUid ?? null,
-        targetEmail: targetEmail ?? null,
-        reason: String(reason).trim(),
-        context,           // "chat" | "community"
-        roomId: roomId ?? null,
-        status: "pending", // pending | reviewed | dismissed
-        createdAt: serverTimestamp()
-    });
-}
 
 window.fb = api;
 window.fbReady = Promise.resolve(api);
